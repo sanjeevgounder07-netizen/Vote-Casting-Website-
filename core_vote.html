@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Core Council Voting</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #dbe9f4, #f6f9fc);
+    margin: 0;
+    padding: 0;
+    color: #1a1a1a;
+    font-size: 18px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* Header Section */
+  .header {
+    background: linear-gradient(135deg, #002868, #bf0a30);
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+  }
+  .header img {
+    height: 80px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 22px;
+    text-transform: uppercase;
+  }
+  .header p {
+    margin: 5px 0 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .vote-count {
+    background: #FFD700;
+    color: #002868;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    display: inline-block;
+    margin-top: 8px;
+  }
+
+  /* Centered Voting Panel */
+  .container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px 20px;
+  }
+  .vote-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    max-width: 900px;
+    width: 100%;
+  }
+
+  /* Categories & Candidates */
+  .category-block {
+    margin-bottom: 25px;
+  }
+  .category-block h3 {
+    color: #bf0a30;
+    margin-bottom: 10px;
+    font-size: 20px;
+    text-align: center;
+  }
+  .candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+  }
+  .vote-btn {
+    padding: 18px;
+    border: 2px solid #2980b9;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    background: #fff;
+    transition: 0.2s;
+    font-weight: 700;
+  }
+  .vote-btn.selected {
+    background: #2980b9;
+    color: #fff;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 800;
+    cursor: pointer;
+    color: #fff;
+    font-size: 16px;
+  }
+  .btnSubmit { background: #2980b9; }
+  .btnNext { background: #bf0a30; }
+  .btnEnd { background: #f39c12; }
+  .btnCount { background: #27ae60; }
+  button:hover { opacity: 0.9; }
+
+  #confirmation {
+    margin-top: 12px;
+    text-align: center;
+    font-weight: 700;
+    color: #009900;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header with College & Teacher Name -->
+<div class="header">
+  <img src="sms.jpg" alt="School Logo" onerror="this.style.display='none'">
+  <h1>BUNTS SANGHA'S S M SHETTY HIGH SCHOOL AND JUNIOR COLLEGE</h1>
+  <p id="teacherInfo"></p>
+  <div id="voteCountDisplay" class="vote-count">Votes: 0</div>
+</div>
+
+<!-- Voting Panel -->
+<div class="container">
+  <div class="vote-box" id="formArea">
+    <!-- Dynamic voting form -->
+  </div>
+</div>
+
+<!-- Buttons -->
+<div class="controls">
+  <button id="btnSubmit" class="btnSubmit" onclick="submitVote()">Submit Vote</button>
+  <button id="btnNext" class="btnNext" onclick="nextVoter()">Next Voter</button>
+  <button id="btnEnd" class="btnEnd" onclick="endSession()">End Session</button>
+  <button id="btnCount" class="btnCount" onclick="countVotes()">Count Votes</button>
+</div>
+
+<div id="confirmation"></div>
+
+<audio id="clickSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+<script>
+const audio = document.getElementById('clickSound');
+function playClick(){ audio.currentTime=0; audio.play().catch(()=>{}); }
+
+let positionsRaw = JSON.parse(localStorage.getItem('core_positions') || '{}');
+let voteResults = JSON.parse(localStorage.getItem('core_voteResults') || '{}');
+let voterCount = parseInt(localStorage.getItem('core_voterCount') || '0', 10) || 0;
+let sessionEnded = (localStorage.getItem('core_sessionEnded') === 'true');
+
+const teacherName = localStorage.getItem('core_teacherName') || 'N/A';
+document.getElementById('teacherInfo').textContent = `Session Conducted By: ${teacherName}`;
+
+function normalizePositions(raw){
+  const map = {};
+  for(const key of Object.keys(raw)){
+    const val = raw[key];
+    if(Array.isArray(val)){
+      map[key] = { title: key, candidates: val.slice() };
+    } else if(val && Array.isArray(val.candidates)){
+      map[key] = { title: val.title || key, candidates: val.candidates.slice() };
+    }
+  }
+  return map;
+}
+let positions = normalizePositions(positionsRaw);
+
+for(const slug of Object.keys(positions)){
+  if(!voteResults[slug]){
+    voteResults[slug] = new Array(positions[slug].candidates.length).fill(0);
+  }
+}
+localStorage.setItem('core_voteResults', JSON.stringify(voteResults));
+
+function updateVoteCountUI(){
+  document.getElementById('voteCountDisplay').textContent = 'Votes: ' + voterCount;
+}
+
+function renderForm(){
+  const formArea = document.getElementById('formArea');
+  formArea.innerHTML = '';
+  const slugs = Object.keys(positions);
+  if(slugs.length === 0){
+    formArea.innerHTML = '<p style="color:red;text-align:center">No positions found. Run core_setup.html first.</p>';
+    return;
+  }
+  slugs.forEach(slug=>{
+    const pos = positions[slug];
+    const block = document.createElement('div');
+    block.className = 'category-block';
+    const h = document.createElement('h3'); h.textContent = pos.title;
+    block.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'candidate-grid';
+    pos.candidates.forEach((name, idx)=>{
+      const btn = document.createElement('div');
+      btn.className = 'vote-btn';
+      btn.textContent = name;
+      btn.dataset.slug = slug;
+      btn.dataset.index = idx;
+      btn.onclick = ()=>{
+        grid.querySelectorAll('.vote-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+      };
+      grid.appendChild(btn);
+    });
+    block.appendChild(grid);
+    formArea.appendChild(block);
+  });
+  updateVoteCountUI();
+}
+
+function submitVote(){
+  if(sessionEnded){ alert('Voting has ended.'); return; }
+  const selections = [];
+  Object.keys(positions).forEach(slug=>{
+    const sel = document.querySelector(`.vote-btn.selected[data-slug="${slug}"]`);
+    if(!sel) selections.push(null);
+    else selections.push({slug, idx: parseInt(sel.dataset.index)});
+  });
+  if(selections.includes(null)){ alert('Select one candidate per position'); return; }
+  selections.forEach(s=>{ voteResults[s.slug][s.idx]++; });
+  localStorage.setItem('core_voteResults', JSON.stringify(voteResults));
+  voterCount++;
+  localStorage.setItem('core_voterCount', voterCount);
+  playClick();
+  document.getElementById('confirmation').textContent = '✅ Vote recorded.';
+  updateVoteCountUI();
+}
+
+function nextVoter(){
+  document.querySelectorAll('.vote-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('confirmation').textContent = '';
+}
+
+function endSession(){
+  if(confirm('End voting session?')){
+    sessionEnded = true;
+    localStorage.setItem('core_sessionEnded','true');
+    alert('Voting session ended.');
+  }
+}
+
+function countVotes(){
+  window.location.href = 'core_result.html';
+}
+
+renderForm();
+</script>
+</body>
+</html>

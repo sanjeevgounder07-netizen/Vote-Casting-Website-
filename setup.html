@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CR Election Setup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: 'Segoe UI', sans-serif;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 0;
+      font-size: 18px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #002868, #bf0a30);
+      color: #fff;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+    }
+    .header img {
+      height: 80px;
+      margin-right: 20px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+    .header h1 {
+      margin: 0;
+      text-transform: uppercase;
+      font-size: 22px;
+    }
+    .class-info {
+      text-align: center;
+      margin: 15px 0;
+      font-size: 20px;
+      color: #bf0a30;
+      font-weight: bold;
+    }
+    form {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input[type=number],
+    input[type=text] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .candidate-label {
+      margin-top: 10px;
+    }
+    button {
+      background: #bf0a30;
+      color: #fff;
+      font-size: 18px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      margin-top: 20px;
+      cursor: pointer;
+      transition: background .2s;
+      width: 100%;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #8b071f;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="sms.jpg" alt="School Logo">
+    <h1>BUNTS SANGHA'S S M SHETTY HIGH SCHOOL AND JUNIOR COLLEGE</h1>
+  </div>
+
+  <div class="class-info" id="classInfo">
+    <!-- Filled by JS -->
+  </div>
+
+  <form id="setupForm" onsubmit="startVoting(event)">
+    <label>Number of Male Candidates:</label>
+    <input type="number" id="maleCount" min="1" max="10" required onchange="generateInputs('male')">
+    <div id="maleInputs"></div>
+
+    <label>Number of Female Candidates:</label>
+    <input type="number" id="femaleCount" min="1" max="10" required onchange="generateInputs('female')">
+    <div id="femaleInputs"></div>
+
+    <button type="submit">Start Voting</button>
+  </form>
+
+<script>
+  const classKey = localStorage.getItem('classKey') || '';
+  const teacherName = localStorage.getItem('teacherName') || 'N/A';
+  const teacherPassword = localStorage.getItem('teacherPassword') || '';
+
+  // Show class & teacher info
+  document.getElementById('classInfo').textContent =
+    `Class: ${classKey} | Conducted by: ${teacherName}`;
+
+  function generateInputs(type){
+    const count = +document.getElementById(type+'Count').value;
+    const container = document.getElementById(type+'Inputs');
+    container.innerHTML = '';
+    for(let i=1; i<=count; i++){
+      const lbl = document.createElement('label');
+      lbl.textContent = `${type.charAt(0).toUpperCase()+type.slice(1)} Candidate ${i}:`;
+      lbl.className = 'candidate-label';
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.id = type + i;
+      inp.required = true;
+      container.appendChild(lbl);
+      container.appendChild(inp);
+    }
+  }
+
+  function startVoting(ev){
+    ev.preventDefault();
+    const maleCount = +document.getElementById('maleCount').value;
+    const femaleCount = +document.getElementById('femaleCount').value;
+    const male = [], female = [];
+
+    for(let i=1;i<=maleCount;i++){
+      male.push(document.getElementById('male'+i).value.trim());
+    }
+    for(let i=1;i<=femaleCount;i++){
+      female.push(document.getElementById('female'+i).value.trim());
+    }
+
+    localStorage.setItem(classKey+'_votingData', JSON.stringify({
+      class: classKey,
+      male,
+      female,
+      currentVoter: 1
+    }));
+
+    localStorage.setItem(classKey+'_voteResults', JSON.stringify({
+      male: new Array(maleCount).fill(0),
+      female: new Array(femaleCount).fill(0)
+    }));
+
+    localStorage.setItem('activeClass', classKey);
+
+    window.location.href = 'vote.html';
+  }
+</script>
+
+</body>
+</html>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const scroller = `
+    <div class="scroller">
+      <span>Student Council General Election 2026-27</span>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("afterbegin", scroller);
+});
+</script>

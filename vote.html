@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Class CR Voting</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #dbe9f4, #f6f9fc);
+    margin: 0;
+    padding: 0;
+    color: #1a1a1a;
+    font-size: 18px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #002868, #bf0a30);
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+  }
+  .header img {
+    height: 80px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 20px;
+    text-transform: uppercase;
+  }
+  .header p {
+    margin: 5px 0;
+    font-weight: bold;
+  }
+  .vote-count {
+    background: #FFD700;
+    color: #002868;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 5px;
+  }
+
+  /* Main voting area */
+  .container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 30px 20px;
+  }
+  .vote-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    max-width: 900px;
+    width: 100%;
+  }
+  h3 {
+    text-align: center;
+    color: #bf0a30;
+    margin-bottom: 10px;
+  }
+  .candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+  }
+  .vote-btn {
+    padding: 18px;
+    border: 2px solid #2980b9;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    background: #fff;
+    transition: 0.2s;
+    font-weight: bold;
+  }
+  .vote-btn.selected {
+    background: #2980b9;
+    color: #fff;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    color: #fff;
+    font-size: 16px;
+  }
+  .btnSubmit { background: #2980b9; }
+  .btnNext { background: #bf0a30; }
+  .btnEnd { background: #f39c12; }
+  .btnCount { background: #27ae60; }
+  button:hover { opacity: 0.9; }
+
+  #confirmation {
+    margin-top: 12px;
+    text-align: center;
+    font-weight: bold;
+    color: #009900;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <img src="sms.jpg" alt="School Logo">
+  <h1>BUNTS SANGHA'S S M SHETTY HIGH SCHOOL AND JUNIOR COLLEGE</h1>
+  <p id="classInfo"></p>
+  <div id="voteCountDisplay" class="vote-count">Votes: 0</div>
+</div>
+
+<!-- Voting Panel -->
+<div class="container">
+  <div class="vote-box" id="formArea"></div>
+</div>
+
+<!-- Buttons -->
+<div class="controls">
+  <button class="btnSubmit" onclick="submitVote()">Submit Vote</button>
+  <button class="btnNext" onclick="nextVoter()">Next Voter</button>
+  <button class="btnEnd" onclick="endSession()">End Session</button>
+  <button class="btnCount" onclick="countVotes()">Count Votes</button>
+</div>
+
+<div id="confirmation"></div>
+
+<!-- Beep Sound -->
+<audio id="clickSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+<script>
+const audio = document.getElementById('clickSound');
+function playClick(){ audio.currentTime = 0; audio.play().catch(()=>{}); }
+
+const classKey = localStorage.getItem('activeClass');
+const teacherName = localStorage.getItem('teacherName') || 'N/A';
+let data = JSON.parse(localStorage.getItem(classKey + '_votingData'));
+let voteResults = JSON.parse(localStorage.getItem(classKey + '_voteResults'));
+let voterCount = parseInt(localStorage.getItem(classKey + '_voterCount') || '0');
+let sessionEnded = (localStorage.getItem(classKey + '_sessionEnded') === 'true');
+
+document.getElementById('classInfo').textContent =
+  `Class: ${data.class} | Conducted By: ${teacherName}`;
+
+function updateVoteCountUI(){
+  document.getElementById('voteCountDisplay').textContent = 'Votes: ' + voterCount;
+}
+
+function renderForm(){
+  const formArea = document.getElementById('formArea');
+  formArea.innerHTML = `
+    <div class="candidate-section">
+      <h3>Male Candidates</h3>
+      <div id="maleButtons" class="candidate-grid"></div>
+    </div>
+    <div class="candidate-section">
+      <h3>Female Candidates</h3>
+      <div id="femaleButtons" class="candidate-grid"></div>
+    </div>
+  `;
+  data.male.forEach((n, i) => {
+    let btn = document.createElement('div');
+    btn.className = 'vote-btn';
+    btn.textContent = n;
+    btn.onclick = () => {
+      document.querySelectorAll('#maleButtons .vote-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      btn.dataset.index = i;
+    };
+    document.getElementById('maleButtons').appendChild(btn);
+  });
+  data.female.forEach((n, i) => {
+    let btn = document.createElement('div');
+    btn.className = 'vote-btn';
+    btn.textContent = n;
+    btn.onclick = () => {
+      document.querySelectorAll('#femaleButtons .vote-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      btn.dataset.index = i;
+    };
+    document.getElementById('femaleButtons').appendChild(btn);
+  });
+  updateVoteCountUI();
+}
+
+function submitVote(){
+  if(sessionEnded){ alert('Voting has ended.'); return; }
+  const m = document.querySelector('#maleButtons .selected');
+  const f = document.querySelector('#femaleButtons .selected');
+  if(!m || !f){
+    alert('Please select one male and one female candidate.');
+    return;
+  }
+  voteResults.male[m.dataset.index]++;
+  voteResults.female[f.dataset.index]++;
+  localStorage.setItem(classKey + '_voteResults', JSON.stringify(voteResults));
+  voterCount++;
+  localStorage.setItem(classKey + '_voterCount', voterCount);
+  playClick();
+  document.getElementById('confirmation').textContent = '✅ Vote recorded.';
+  updateVoteCountUI();
+}
+
+function nextVoter(){
+  document.querySelectorAll('.vote-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('confirmation').textContent = '';
+}
+
+function endSession(){
+  if(confirm('End voting session?')){
+    sessionEnded = true;
+    localStorage.setItem(classKey + '_sessionEnded', 'true');
+    alert('Voting session ended.');
+  }
+}
+
+function countVotes(){
+  window.location.href = 'result.html';
+}
+
+renderForm();
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!-- core_setup.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Core Council — Setup</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{font-family: 'Segoe UI',sans-serif;background:#f4f6f8;color:#1a1a1a;margin:0;padding:0;font-size:18px;}
+    .header{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#002868,#bf0a30);color:#fff;padding:18px;box-shadow:0 4px 8px rgba(0,0,0,0.12)}
+    .header img{height:70px;margin-right:12px;border-radius:8px}
+    .header h1{margin:0;font-size:20px;text-transform:uppercase}
+    .container{max-width:900px;margin:22px auto;padding:24px;background:#fff;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    .teacher{font-weight:700;color:#002868;margin-bottom:8px;text-align:center}
+    .sub{color:#bf0a30;text-align:center;font-family:Georgia,serif;font-size:22px;margin-bottom:14px}
+    .checkboxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:12px}
+    .category-block{border:1px solid #ddd;padding:12px;border-radius:8px;background:#fbfbfb}
+    label {display:block;margin-bottom:6px;font-weight:600}
+    input[type="number"], input[type="text"]{width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;font-size:15px;box-sizing:border-box}
+    .actions{margin-top:18px;text-align:center}
+    button{background:#bf0a30;color:#fff;border:none;padding:12px 20px;border-radius:8px;font-size:16px;cursor:pointer}
+    button:hover{background:#8b071f}
+    .note{font-size:14px;color:#666;margin-top:10px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="sms.jpg" alt="Logo" onerror="this.style.display='none'">
+    <h1>BUNTS SANGHA'S S M SHETTY HIGH SCHOOL AND JUNIOR COLLEGE</h1>
+  </div>
+
+  <div class="container">
+    <div class="teacher" id="teacherName">Teacher: Loading...</div>
+    <div class="sub">CORE STUDENT COUNCIL ELECTIONS 2025-26</div>
+
+    <form id="coreSetupForm" onsubmit="startCoreVoting(event)">
+      <label>Select positions to run (check only those you need):</label>
+      <div class="checkboxes">
+        <div class="category-block">
+          <label><input type="checkbox" value="General Secretary" onchange="toggleCategory(this)"> General Secretary</label>
+          <div id="ui-General-Secretary"></div>
+        </div>
+        <div class="category-block">
+          <label><input type="checkbox" value="Assistant General Secretary" onchange="toggleCategory(this)"> Assistant General Secretary</label>
+          <div id="ui-Assistant-General-Secretary"></div>
+        </div>
+        <div class="category-block">
+          <label><input type="checkbox" value="Cultural Secretary" onchange="toggleCategory(this)"> Cultural Secretary</label>
+          <div id="ui-Cultural-Secretary"></div>
+        </div>
+        <div class="category-block">
+          <label><input type="checkbox" value="Assistant Cultural Secretary" onchange="toggleCategory(this)"> Assistant Cultural Secretary</label>
+          <div id="ui-Assistant-Cultural-Secretary"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit">Save & Start Voting</button>
+        <div class="note">Selected categories & candidate lists will be used in the Core voting flow.</div>
+      </div>
+    </form>
+  </div>
+
+<script>
+  // utility: slugify to create safe ids/keys
+  function slugify(s){
+    return s.toString().toLowerCase().trim()
+      .replace(/&/g,'-and-')
+      .replace(/\s+/g,'-')
+      .replace(/[^a-z0-9\-]/g,'-')
+      .replace(/\-+/g,'-');
+  }
+
+  // Show teacher name (prefer core_teacherName, fallback teacherName)
+  const coreT = localStorage.getItem('core_teacherName');
+  const altT = localStorage.getItem('teacherName');
+  document.getElementById('teacherName').textContent = 'Teacher: ' + (coreT || altT || 'N/A');
+
+  function toggleCategory(chk){
+    const title = chk.value;
+    const uiId = 'ui-' + title.replace(/\s/g,'-');
+    const container = document.getElementById(uiId);
+    container.innerHTML = '';
+    if(chk.checked){
+      // number input
+      const lbl = document.createElement('label'); lbl.textContent = 'Number of candidates:';
+      const num = document.createElement('input'); num.type='number'; num.min=1; num.max=50;
+      num.onchange = function(){ generateCandidateInputs(title, parseInt(this.value) || 0); };
+      container.appendChild(lbl); container.appendChild(num);
+      const inputsDiv = document.createElement('div'); inputsDiv.id = `${slugify(title)}-inputs`; container.appendChild(inputsDiv);
+    }
+  }
+
+  function generateCandidateInputs(title, count){
+    const id = `${slugify(title)}-inputs`;
+    const container = document.getElementById(id);
+    if(!container) return;
+    container.innerHTML = '';
+    for(let i=1;i<=count;i++){
+      const lbl = document.createElement('label'); lbl.textContent = `Candidate ${i}:`;
+      const inp = document.createElement('input'); inp.type='text'; inp.id = `${slugify(title)}-cand-${i}`; inp.required = true;
+      container.appendChild(lbl); container.appendChild(inp);
+    }
+  }
+
+  function startCoreVoting(ev){
+    ev.preventDefault();
+    // gather selected categories and candidates
+    const checkboxes = document.querySelectorAll('input[type=checkbox][value]');
+    const positions = {}; // slug -> { title, candidates: [] }
+    const voteResults = {}; // slug -> [0..]
+    for(const cb of checkboxes){
+      if(cb.checked){
+        const title = cb.value;
+        const slug = slugify(title);
+        const inputs = document.querySelectorAll(`#${slug}-inputs input[type=text]`);
+        if(!inputs || inputs.length === 0){
+          alert(`Enter number of candidates for "${title}" and add names.`);
+          return;
+        }
+        const candidates = [];
+        for(const inp of inputs){
+          if(!inp.value.trim()){
+            alert('Please fill all candidate names.');
+            inp.focus();
+            return;
+          }
+          candidates.push(inp.value.trim());
+        }
+        positions[slug] = { title, candidates };
+        voteResults[slug] = new Array(candidates.length).fill(0);
+      }
+    }
+
+    if(Object.keys(positions).length === 0){
+      alert('Please select at least one position to run.');
+      return;
+    }
+
+    // Save to localStorage with clear keys used by vote page
+    localStorage.setItem('core_positions', JSON.stringify(positions));
+    localStorage.setItem('core_voteResults', JSON.stringify(voteResults));
+    localStorage.setItem('core_voterCount', '0');
+    localStorage.setItem('core_sessionEnded', 'false');
+
+    // redirect to voting page
+    window.location.href = 'core_vote.html';
+  }
+</script>
+</body>
+</html>
